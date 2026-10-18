@@ -7,4 +7,4 @@ module github.com/Elagoht/collage-client
 
 go 1.26
 
-require github.com/Elagoht/collage v0.66.0
+require github.com/Elagoht/collage v0.67.0
