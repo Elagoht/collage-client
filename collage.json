@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Elagoht/collage-snippets-highlighter/main/schemas/collage-plugin-manifest.schema.json",
+  "name": "elagoht/client",
+  "description": "A collage plugin that serves a tiny client script: element getter shorthands, and a fragment fetched from its own URL put in place by replacing or morphing.",
+  "repository": "https://github.com/Elagoht/collage-client",
+  "templateFunctions": [
+    {
+      "name": "clientjs",
+      "signature": "clientjs [nonce]",
+      "insert": "clientjs",
+      "doc": "The collage-client script: `collage.$`, `collage.$$`, `collage.replace` and `collage.morph`. Put it in the master layout's `<head>`. With a CSP: `{{clientjs cspNonce}}`."
+    }
+  ]
+}
