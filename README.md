@@ -24,7 +24,7 @@ Then one call in the master layout:
 </head>
 ```
 
-Requires collage v0.66.0 or later. Register it in `Config.Plugins`: it adds a
+Requires collage v0.67.0 or later. Register it in `Config.Plugins`: it adds a
 template function, which only a plugin registered there can. There is nothing to
 configure.
 
