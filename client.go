@@ -64,6 +64,11 @@ var script = []byte("(function () {\n" + idiomorphJS + "\n" + clientJS + "})();\
 // Plugin serves the script and adds {{clientjs}}.
 type Plugin struct{}
 
+var (
+	_ collage.Plugin     = (*Plugin)(nil)
+	_ collage.Configurer = (*Plugin)(nil)
+)
+
 // New returns the plugin. There is nothing to configure.
 func New() *Plugin { return &Plugin{} }
 

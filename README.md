@@ -79,6 +79,19 @@ A `GET` of `url` with the header `Collage-Fetch: 1` (`collage.FetchHeader`) and
 the page's cookies (`credentials: "same-origin"`), as collage's fragment paths and
 actions expect.
 
+The answer is inserted as trusted markup, the way `outerHTML` inserts it. So `url`
+must be on the page's own origin: another origin is refused before the fetch, and
+so is an answer that a redirect brought from another origin. `url` and `data-src`
+are the site's own paths. Never build them from visitor input: a path on your own
+site that echoes what it is given would be inserted too.
+
+### Calls that overlap
+
+The newest call on an element wins. Starting `replace` or `morph` on an element
+that already has one in flight aborts the older one, which rejects with
+`superseded by a newer call on the element`, so a slow answer never lands on top
+of a newer one.
+
 ## The shopping list, again
 
 The [Update part of a page](https://collage.furkanbaytekin.dev/en/docs/update-part-of-a-page/)
@@ -123,8 +136,11 @@ form.addEventListener("submit", async (event) => {
 ## When it fails
 
 A target that is not in the page, an element with no `data-src` and no `url`, a
-network error, an answer that is not 2xx, or an answer that is not a single element
-— a plain-text error body, a whole error page, two elements side by side — leaves
+`url` on another origin or a redirect to one, a network error, an answer that is
+not 2xx, an answer that is not a single element — a plain-text error body, a
+document with `<html>`, `<head>` or `<body>`, two elements side by side — an
+element taken out of the page while its fragment was fetched, or a newer call on
+the same element, leaves
 the page as it was, fires no event, and rejects with an `Error` that says which:
 
 ```
@@ -154,6 +170,12 @@ there is nothing in the render for the plugin to read it from. A policy that all
 nonce matters under a nonce-only or `'strict-dynamic'` policy. A static build
 removes the nonce attribute, as it does every placeholder nonce.
 
+In development, collage-secure sends the policy as
+`Content-Security-Policy-Report-Only`, which blocks nothing. A layout that forgot
+`cspNonce` works under `collage dev` and stops loading the script only in
+production, under a nonce-only or `'strict-dynamic'` policy. Look for the report in
+the browser console during development.
+
 ## The file
 
 The script is served under `/_client/` at a content-addressed name,
@@ -163,7 +185,7 @@ file's own is a 404. It is loaded with `defer`, so it runs before
 `DOMContentLoaded`, after the page is parsed. In development it is served
 `no-store`, like every mount.
 
-It is about 14 KB, 5.5 KB gzipped; the hand-written part is under 3 KB, the rest is
+It is about 15.5 KB, 6 KB gzipped; the hand-written part is about 4 KB, the rest is
 idiomorph and its license notice. It depends on nothing.
 
 ## Credits

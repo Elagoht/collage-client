@@ -3,6 +3,7 @@ package client_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -79,6 +80,9 @@ func TestTag_TooManyArguments(t *testing.T) {
 	res := s.Get("/")
 	if res.Status == http.StatusOK && strings.Contains(res.Body, "<script") {
 		t.Errorf("two arguments rendered a script: %d\n%s", res.Status, res.Body)
+	}
+	if !s.Logs.Has(slog.LevelWarn, "clientjs takes at most one argument, the nonce; got 2") {
+		t.Errorf("no error saying clientjs takes at most one argument; logs:\n%s", s.Logs)
 	}
 }
 
