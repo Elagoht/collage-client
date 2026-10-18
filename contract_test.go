@@ -28,7 +28,9 @@ func TestContract(t *testing.T) {
 		t.Fatal("go.mod requires no github.com/Elagoht/collage")
 	}
 	cmd := exec.Command(gobin, "run", "github.com/Elagoht/collage/cmd/collage@"+string(m[1]), "plugin", "check", "-run", ".")
-	cmd.Env = append(os.Environ(), "GOFLAGS=-mod=mod")
+	// GOWORK=off: the check runs the released CLI against this module alone, and
+	// -mod=mod is refused in workspace mode, which CI runs the plugins in.
+	cmd.Env = append(os.Environ(), "GOFLAGS=-mod=mod", "GOWORK=off")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("collage plugin check -run .: %v\n%s", err, out)

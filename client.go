@@ -73,7 +73,7 @@ var (
 func New() *Plugin { return &Plugin{} }
 
 func (p *Plugin) Name() string    { return Name }
-func (p *Plugin) Version() string { return "0.1.0" }
+func (p *Plugin) Version() string { return "0.1.1" }
 
 // Configure adds {{clientjs}}. A render function, because the script's URL
 // carries its content hash, which the render's own asset resolver mints.
