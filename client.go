@@ -1,6 +1,6 @@
 // Package client is a collage plugin that serves a tiny client script: element
-// getter shorthands, and a fragment fetched from its own URL put in place by
-// replacing or morphing.
+// getter shorthands, and a fragment put in place by replacing or morphing,
+// fetched from its own URL or handed over as markup.
 //
 //	app, err := collage.New(&collage.Config{
 //		Plugins: []collage.Plugin{client.New()},
@@ -18,11 +18,14 @@
 //	collage.$$(selector, root?)   // querySelectorAll, as an Array
 //	collage.replace(target, url?) // fetch a fragment, swap it in with outerHTML
 //	collage.morph(target, url?)   // fetch a fragment, patch the DOM in place
+//	collage.put(target, content, { morph?, inner? }) // the same, content in hand
 //
 // target is a selector or an Element, and url defaults to the element's data-src,
 // where a page opened with WithFragmentPath puts {{fragmentURL}}. Both resolve to
 // the element now in the page, after a bubbling collage:swap event on it, and
-// reject, leaving the page untouched, when the fragment cannot be had.
+// reject, leaving the page untouched, when the fragment cannot be had. put takes
+// markup or a node instead of a URL and changes the page before it returns; with
+// inner it fills the element rather than taking its place.
 //
 // The script is served under /_client/ at a content-addressed name, so it is
 // cached for a year and a new release is a new URL. The morphing is idiomorph
@@ -73,13 +76,13 @@ var (
 func New() *Plugin { return &Plugin{} }
 
 func (p *Plugin) Name() string    { return Name }
-func (p *Plugin) Version() string { return "0.1.1" }
+func (p *Plugin) Version() string { return "0.2.0" }
 
 // Configure adds {{clientjs}}. A render function, because the script's URL
 // carries its content hash, which the render's own asset resolver mints.
 func (p *Plugin) Configure(_ context.Context, host collage.ConfigHost) error {
 	return host.AddRenderFunc("clientjs", func(rc *collage.RenderContext) any { // any: html/template.FuncMap's own value type
-		return func(nonce ...string) (template.HTML, error) { return tag(rc, nonce...) }
+		return func(nonce ...string) (template.HTML, error) { return Tag(rc, nonce...) }
 	})
 }
 
@@ -97,11 +100,15 @@ func (p *Plugin) Init(_ context.Context, host collage.Host) error {
 // Shutdown releases nothing.
 func (p *Plugin) Shutdown(context.Context) error { return nil }
 
-// tag is {{clientjs}}: the deferred script element at the content-addressed URL,
+// Tag is {{clientjs}}: the deferred script element at the content-addressed URL,
 // with the nonce when one is given. The nonce is an argument, as in
 // {{clientjs cspNonce}}, because collage-secure renders a placeholder that only it
 // fills in per response; there is nothing in the render to read it from.
-func tag(rc *collage.RenderContext, nonce ...string) (template.HTML, error) {
+//
+// It is exported for a plugin whose own tag includes the client, as collage-live's
+// {{liveClient}} does; the plugin must be registered. A page may include the
+// script more than once: only the first copy runs.
+func Tag(rc *collage.RenderContext, nonce ...string) (template.HTML, error) {
 	if len(nonce) > 1 {
 		return "", fmt.Errorf("client: clientjs takes at most one argument, the nonce; got %d", len(nonce))
 	}

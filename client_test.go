@@ -49,8 +49,8 @@ func TestVersion(t *testing.T) {
 	if p.Name() != "elagoht/client" || p.Name() != client.Name {
 		t.Errorf("Name() = %q", p.Name())
 	}
-	if p.Version() != "0.1.1" {
-		t.Errorf("Version() = %q, want 0.1.0", p.Version())
+	if p.Version() != "0.2.0" {
+		t.Errorf("Version() = %q, want 0.2.0", p.Version())
 	}
 }
 

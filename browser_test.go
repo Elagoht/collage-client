@@ -54,6 +54,8 @@ const browserBox = `<form id="box" data-src="{{fragmentURL "home" "box"}}" onsub
 const browserContent = `{{slot "box"}}
 <div id="nosrc">no data-src</div>
 <div id="crosssrc">another origin's data-src, set below</div>
+<ul id="list"><li id="a">a</li><li id="b"><textarea id="bin"></textarea></li></ul>
+<div id="plain">old</div>
 <script nonce="abc">
 document.addEventListener("DOMContentLoaded", async function () {
   var checks = {}, notes = {}, events = [];
@@ -161,6 +163,74 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     check("raceMorph", await race("morph"));
     check("raceReplace", await race("replace"));
+
+    // put: the content in hand, the page changed when it returns.
+    function throws(name, fn, want) {
+      var before = document.body.innerHTML, n = events.length;
+      try {
+        fn();
+        check(name, false);
+        notes[name] = "returned";
+      } catch (e) {
+        notes[name] = String(e && e.message);
+        check(name, e instanceof Error && notes[name].indexOf(want) >= 0 &&
+          document.body.innerHTML === before && events.length === n);
+      }
+    }
+    var list = c.$("#list"), bin = c.$("#bin"), liA = c.$("#a");
+    bin.focus();
+    bin.value = "eggs";
+    bin.setSelectionRange(1, 2);
+    var n0 = events.length;
+    var put = c.put("#list", '<li id="z">z</li><li id="a">a!</li><li id="b"><textarea id="bin"></textarea></li>', { morph: true, inner: true });
+    ev = events[events.length - 1];
+    check("putInnerMorph", put === list && c.$("#list") === list && list.firstElementChild.id === "z" &&
+      c.$("#a") === liA && liA.textContent === "a!" && list.children.length === 3);
+    check("putInnerMorphKeeps", c.$("#bin") === bin && bin.value === "eggs" &&
+      document.activeElement === bin && bin.selectionStart === 1 && bin.selectionEnd === 2);
+    check("putInnerMorphEvent", events.length === n0 + 1 && ev.target === list && ev.bubbles &&
+      ev.detail.mode === "morph" && ev.detail.inner === true && ev.detail.url === null);
+
+    var plain = c.$("#plain");
+    var filled = c.put(plain, 'one <b>two</b><script nonce="abc">window.putRan = true;</script>', { inner: true });
+    ev = events[events.length - 1];
+    check("putInnerReplace", filled === plain && plain.firstChild.data === "one " && c.$("b", plain).textContent === "two");
+    check("putInnerReplaceEvent", ev.target === plain && ev.detail.mode === "replace" && ev.detail.inner === true);
+    var frag = document.createDocumentFragment();
+    frag.append("text ", document.createElement("i"));
+    c.put(plain, frag, { inner: true });
+    check("putInnerFragment", plain.childNodes.length === 2 && plain.lastChild.tagName === "I");
+    check("putNoScript", window.putRan !== true);
+
+    var outer = c.put("#plain", '<div id="plain">new</div>');
+    ev = events[events.length - 1];
+    check("putOuter", outer !== plain && !plain.isConnected && c.$("#plain") === outer && outer.textContent === "new");
+    check("putOuterEvent", ev.target === outer && ev.detail.mode === "replace" && ev.detail.inner === false);
+    var morphed = c.put(outer, '<div id="plain" class="m">newer</div>', { morph: true });
+    check("putOuterMorph", morphed === outer && outer.className === "m" && outer.textContent === "newer");
+
+    throws("putTwo", function () { c.put("#plain", "<p>a</p><p>b</p>"); }, "put: the answer is not a single element");
+    throws("putText", function () { c.put("#plain", "just text", { morph: true }); }, "not a single element");
+    throws("putDocument", function () { c.put("#plain", "<html><body><p>x</p></body></html>"); }, "not a single element");
+    throws("putNoElement", function () { c.put("#nope", "<p></p>"); }, "put: no element #nope");
+    throws("putDetached", function () { c.put(document.createElement("div"), "x", { inner: true }); }, "not in the page");
+    throws("putNotContent", function () { c.put("#plain", 42, { inner: true }); }, "not markup or a node");
+
+    // put aborts a fetch in flight on the element: the late answer never lands.
+    var late = c.morph("#box", "/_test/slow?ms=400&label=late");
+    await sleep(50);
+    c.put("#box", '<form id="box"><span id="count">put</span></form>', { morph: true });
+    var lateResult = await Promise.allSettled([late]);
+    await sleep(450);
+    check("putSupersedes", lateResult[0].status === "rejected" &&
+      lateResult[0].reason.message.indexOf("superseded") >= 0 && c.$("#count").textContent === "put");
+
+    // A second copy of the script keeps the first.
+    var second = document.createElement("script");
+    second.nonce = "abc";
+    second.src = document.querySelector('script[src^="/_client/"]').src;
+    await new Promise(function (r) { second.onload = second.onerror = r; document.head.append(second); });
+    check("loadedTwice", window.collage === c);
 
     // An element taken out of the page while its fragment is fetched stays out.
     var leaving = c.$("#box");
@@ -440,7 +510,12 @@ func TestBrowser(t *testing.T) {
 		"fail500Replace", "fail500Morph", "fail404", "failTwo", "failText", "failDocument",
 		"failNoTarget", "failNoSrc", "failNetwork",
 		"failCrossOrigin", "failCrossOriginSrc", "failRedirect", "failCommentDocument", "failBodyDocument", "notPwned",
-		"stillThere", "raceMorph", "raceReplace", "failLeft",
+		"stillThere", "raceMorph", "raceReplace",
+		"putInnerMorph", "putInnerMorphKeeps", "putInnerMorphEvent",
+		"putInnerReplace", "putInnerReplaceEvent", "putInnerFragment", "putNoScript",
+		"putOuter", "putOuterEvent", "putOuterMorph",
+		"putTwo", "putText", "putDocument", "putNoElement", "putDetached", "putNotContent",
+		"putSupersedes", "loadedTwice", "failLeft",
 	}
 	for _, name := range want {
 		if v, ok := o.Checks[name]; !ok || !v {
