@@ -5,7 +5,9 @@
 
 // A second copy of the script — a layout calling {{clientjs}} and a plugin that
 // includes it too — keeps the first: its calls in flight are the ones to win.
-if (window.collage) return;
+// The first is told by its API, not by window.collage being set: an element with
+// id="collage" sets it too.
+if (window.collage && typeof window.collage.put === "function") return;
 
 const $ = (selector, root) => (root || document).querySelector(selector);
 const $$ = (selector, root) => Array.from((root || document).querySelectorAll(selector));

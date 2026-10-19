@@ -56,6 +56,7 @@ const browserContent = `{{slot "box"}}
 <div id="crosssrc">another origin's data-src, set below</div>
 <ul id="list"><li id="a">a</li><li id="b"><textarea id="bin"></textarea></li></ul>
 <div id="plain">old</div>
+<div id="collage">an element the browser names window.collage</div>
 <script nonce="abc">
 document.addEventListener("DOMContentLoaded", async function () {
   var checks = {}, notes = {}, events = [];
